@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hour & Minute Controller</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b1020;
+    --panel: rgba(21, 29, 53, .88);
+    --line: rgba(255,255,255,.12);
+    --muted: #9ca9c7;
+    --text: #f5f7ff;
+    --cyan: #58e1e8;
+    --violet: #9b8cff;
+    --orange: #ffb86b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    padding: 24px; color: var(--text);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(ellipse at 15% 15%, rgba(88,225,232,.13), transparent 38%),
+      radial-gradient(ellipse at 85% 85%, rgba(155,140,255,.16), transparent 38%),
+      var(--bg);
+  }
+  .app { width: min(100%, 760px); }
+  .top { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:22px; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .logo { width:44px; height:44px; display:grid; place-items:center; border-radius:14px; font-size:22px;
+    background:linear-gradient(135deg,var(--cyan),var(--violet)); color:#10152a; box-shadow:0 8px 28px #58e1e82b; }
+  h1 { margin:0; font-size:clamp(20px,4vw,28px); letter-spacing:-.7px; }
+  .subtitle { color:var(--muted); font-size:13px; margin-top:4px; }
+  .live { display:flex; align-items:center; gap:7px; color:#a5f3c4; font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+  .dot { width:7px; height:7px; border-radius:50%; background:#6ee7a8; box-shadow:0 0 12px #6ee7a8; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:28px; padding:clamp(18px,4vw,34px);
+    box-shadow:0 24px 80px #0005; backdrop-filter:blur(18px); }
+  .clock { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:clamp(8px,3vw,24px); }
+  .unit { text-align:center; min-width:0; }
+  .unit-label { color:var(--muted); text-transform:uppercase; letter-spacing:.18em; font-size:11px; font-weight:700; margin-bottom:12px; }
+  .number { font-variant-numeric:tabular-nums; font-size:clamp(72px,17vw,140px); line-height:1.05; font-weight:800; letter-spacing:-.07em;
+    background:linear-gradient(180deg,#fff 15%,#b9c7e9); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .unit:first-child .number { text-shadow:0 0 38px #58e1e81c; }
+  .unit:last-child .number { text-shadow:0 0 38px #9b8cff1c; }
+  .colon { font-size:clamp(46px,10vw,80px); font-weight:700; color:#687594; transform:translateY(10px); }
+  .range { color:#7e8aa8; font-size:12px; margin-top:8px; }
+  .controls { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:30px; }
+  .control-group { border:1px solid var(--line); border-radius:20px; padding:16px; background:#ffffff04; }
+  .group-title { font-size:12px; font-weight:750; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:0 0 12px; }
+  .button-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  button { border:0; font:inherit; cursor:pointer; transition:transform .15s,filter .15s,background .15s; -webkit-tap-highlight-color:transparent; }
+  button:hover { filter:brightness(1.12); transform:translateY(-1px); }
+  button:active { transform:scale(.97); }
+  button:focus-visible { outline:3px solid white; outline-offset:3px; }
+  .step { padding:14px 10px; border-radius:13px; font-weight:750; font-size:15px; color:var(--text); background:#ffffff0b; border:1px solid var(--line); }
+  .step.plus { background:linear-gradient(135deg,#164e5b,#1c6670); border-color:#58e1e84d; }
+  .step.minus { background:linear-gradient(135deg,#332e62,#494078); border-color:#9b8cff4d; }
+  .key { display:inline-grid; place-items:center; min-width:23px; height:22px; margin-left:5px; padding:0 5px; border:1px solid #ffffff26; border-radius:6px; font-size:11px; color:#d7def3; background:#0002; }
+  .footer-actions { display:flex; gap:12px; margin-top:18px; }
+  .reset { flex:1; padding:15px 16px; border-radius:14px; color:#1a1c2d; background:linear-gradient(100deg,var(--cyan),#9cf0d0); font-weight:800; }
+  .help { width:52px; flex:0 0 52px; border-radius:14px; color:white; font-size:21px; font-weight:800; background:#ffffff0d; border:1px solid var(--line); }
+  .hint { text-align:center; color:#7e8aa8; font-size:12px; margin-top:18px; }
+  .keyboard-note { display:none; }
+  .modal-backdrop { position:fixed; inset:0; display:none; place-items:center; padding:20px; background:#050816c9; z-index:10; }
+  .modal-backdrop.open { display:grid; }
+  .modal { width:min(100%,490px); background:#151d35; border:1px solid var(--line); border-radius:24px; padding:24px; box-shadow:0 25px 90px #0009; }
+  .modal-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
+  .modal h2 { margin:0; font-size:22px; }
+  .close { width:36px; height:36px; border-radius:10px; color:white; background:#ffffff12; font-size:20px; }
+  .modal p { color:#bac4dd; line-height:1.55; font-size:14px; }
+  .tutorial-list { display:grid; gap:9px; margin:18px 0; }
+  .tutorial-item { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:11px 13px; border:1px solid var(--line); border-radius:12px; color:#e9edfa; font-size:14px; }
+  kbd { display:inline-grid; place-items:center; min-width:30px; padding:4px 8px; color:white; background:#293450; border:1px solid #ffffff2c; border-radius:7px; font:700 12px ui-monospace,monospace; }
+  .modal .fine { font-size:12px; color:#8794b2; margin-bottom:0; }
+  @media (min-width: 800px) and (pointer:fine) {
+    .mobile-controls { display:none; }
+    .keyboard-note { display:block; }
+  }
+  @media (max-width: 520px) {
+    body { padding:15px; align-items:start; padding-top:28px; }
+    .top { align-items:flex-start; }
+    .live { font-size:10px; padding-top:5px; }
+    .panel { border-radius:23px; }
+    .controls { gap:10px; margin-top:23px; }
+    .control-group { padding:11px; border-radius:16px; }
+    .step { padding:13px 4px; font-size:13px; }
+    .step .key { display:none; }
+    .group-title { font-size:10px; letter-spacing:.08em; }
+    .range { font-size:10px; }
+  }
+  @media (prefers-reduced-motion: reduce) { *,*::before,*::after { transition:none !important; } }
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">◷</div>
+      <div><h1>Time Controller</h1><div class="subtitle">Set your own hour and minute</div></div>
+    </div>
+    <div class="live"><span class="dot"></span> Manual mode</div>
+  </header>
+
+  <section class="panel" aria-label="Time controller">
+    <div class="clock" aria-live="polite" aria-atomic="true">
+      <div class="unit">
+        <div class="unit-label">Hours</div>
+        <div class="number" id="hours">00</div>
+        <div class="range">00–23</div>
+      </div>
+      <div class="colon" aria-hidden="true">:</div>
+      <div class="unit">
+        <div class="unit-label">Minutes</div>
+        <div class="number" id="minutes">00</div>
+        <div class="range">00–59</div>
+      </div>
+    </div>
+
+    <div class="controls mobile-controls">
+      <section class="control-group">
+        <h2 class="group-title">Hour control</h2>
+        <div class="button-row">
+          <button class="step plus" id="hourPlus" aria-label="Increase hour">H+ <span class="key">H</span></button>
+          <button class="step minus" id="hourMinus" aria-label="Decrease hour">H− <span class="key">N</span></button>
+        </div>
+      </section>
+      <section class="control-group">
+        <h2 class="group-title">Minute control</h2>
+        <div class="button-row">
+          <button class="step plus" id="minutePlus" aria-label="Increase minute">M+ <span class="key">M</span></button>
+          <button class="step minus" id="minuteMinus" aria-label="Decrease minute">M− <span class="key">J</span></button>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer-actions">
+      <button class="reset" id="reset">↻ &nbsp; RESET TO DEFAULT <span class="key">R</span></button>
+      <button class="help" id="help" aria-label="Open tutorial" title="How to use">?</button>
+    </div>
+    <div class="hint keyboard-note">Keyboard enabled · H / N change hours · M / J change minutes · R resets</div>
+    <div class="hint">Hours and minutes wrap around automatically</div>
+  </section>
+</main>
+
+<div class="modal-backdrop" id="tutorial" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
+  <section class="modal">
+    <div class="modal-head"><h2 id="tutorialTitle">How to use</h2><button class="close" id="closeHelp" aria-label="Close tutorial">×</button></div>
+    <p>Change the hours and minutes independently. When a value reaches its limit, it loops back to the beginning (or end when decreasing).</p>
+    <div class="tutorial-list">
+      <div class="tutorial-item"><span>Increase hour</span><span><b>H+</b> <kbd>H</kbd></span></div>
+      <div class="tutorial-item"><span>Decrease hour</span><span><b>H−</b> <kbd>N</kbd></span></div>
+      <div class="tutorial-item"><span>Increase minute</span><span><b>M+</b> <kbd>M</kbd></span></div>
+      <div class="tutorial-item"><span>Decrease minute</span><span><b>M−</b> <kbd>J</kbd></span></div>
+      <div class="tutorial-item"><span>Reset to current time</span><span><kbd>R</kbd></span></div>
+    </div>
+    <p class="fine">On phones and tablets, tap the H+/H− and M+/M− buttons. On computers, use the letter keys shown above. The ? button opens this tutorial.</p>
+  </section>
+</div>
+
+<script>
+(() => {
+  let hours = 0;
+  let minutes = 0;
+  const hoursEl = document.getElementById('hours');
+  const minutesEl = document.getElementById('minutes');
+  const tutorial = document.getElementById('tutorial');
+
+  function render() {
+    hoursEl.textContent = String(hours).padStart(2, '0');
+    minutesEl.textContent = String(minutes).padStart(2, '0');
+  }
+  function changeHour(amount) { hours = (hours + amount + 24) % 24; render(); }
+  function changeMinute(amount) { minutes = (minutes + amount + 60) % 60; render(); }
+  function resetToCurrentTime() {
+    const now = new Date();
+    hours = now.getHours();
+    minutes = now.getMinutes();
+    render();
+  }
+  document.getElementById('hourPlus').addEventListener('click', () => changeHour(1));
+  document.getElementById('hourMinus').addEventListener('click', () => changeHour(-1));
+  document.getElementById('minutePlus').addEventListener('click', () => changeMinute(1));
+  document.getElementById('minuteMinus').addEventListener('click', () => changeMinute(-1));
+  document.getElementById('reset').addEventListener('click', resetToCurrentTime);
+  document.getElementById('help').addEventListener('click', () => tutorial.classList.add('open'));
+  document.getElementById('closeHelp').addEventListener('click', () => tutorial.classList.remove('open'));
+  tutorial.addEventListener('click', e => { if (e.target === tutorial) tutorial.classList.remove('open'); });
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.altKey || e.metaKey || e.repeat) return;
+    const key = e.key.toLowerCase();
+    if (key === 'h') changeHour(1);
+    else if (key === 'n') changeHour(-1);
+    else if (key === 'm') changeMinute(1);
+    else if (key === 'j') changeMinute(-1);
+    else if (key === 'r') resetToCurrentTime();
+    else if (key === '?' || (key === '/' && e.shiftKey)) tutorial.classList.add('open');
+    else if (key === 'escape') tutorial.classList.remove('open');
+  });
+  resetToCurrentTime();
+})();
+</script>
+</body>
+</html>
